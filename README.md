@@ -2,6 +2,10 @@
 
 Code for "Mapping EQ-5D utilities to GBD 2010 and GBD 2013 disability weights: results of two pilot studies in Belgium", submitted to Population Health Metrics.
 
+View the results of the first pilot study here: https://rawgit.com/brechtdv/eq5d-mapping/master/pilot-1.html
+
+View the results of the second pilot study here: https://rawgit.com/brechtdv/eq5d-mapping/master/pilot-2.html
+
 ##### Contents
 <table>
 <tr>
