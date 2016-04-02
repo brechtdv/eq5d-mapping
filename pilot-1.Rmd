@@ -1,0 +1,147 @@
+---
+title: "Mapping EQ-5D utilities to GBD 2010 and GBD 2013 disability weights"
+output: html_document
+---
+
+```{r, include = FALSE}
+library(knitr)
+library(printr)
+```
+
+#### Pilot Study 1
+
+### Analyze EQ5D scores
+
+```{r, warning=FALSE}
+## source functions to analyze EQ5D scores
+source("eq5d-mapping-functions.R")
+
+## define GBD disability weights
+DW2010 <- c(0.003, 0.040, 0.127, 0.319, 0.756)[-4]
+DW2013 <- c(0.005, 0.037, 0.128,    NA, 0.778)[-4]
+```
+
+```{r}
+## scatterplot
+par(mar = c(4, 4, 1, 1))
+plot(DW2010, DW2013)
+```
+
+```{r}
+## load data
+wb <- loadWorkbook("data-pilot-1.xlsx") 
+db <- readWorksheet(wb, sheet = 1)
+
+## calculate utility for each observation
+id <- seq(nrow(db))
+utilities <- t(sapply(id, analyze_p1))
+
+## remove health state 4 (epilepsy)
+## and give this a new name to avoid confusion
+utilities4 <- utilities[, -4]    
+
+## calculate mean utility per health state
+## note: this sorts utilities by health state
+utilities_mean   <- apply(utilities4, 2, mean)
+utilities_median <- apply(utilities4, 2, median)
+utilities_sd     <- apply(utilities4, 2, sd)
+```
+
+### Plot utilities
+
+```{r}
+## boxplot of utilities for each health state
+df <-
+  data.frame(utility = c(utilities4),
+             health.state = factor(rep(1:4, each = nrow(utilities4))))
+ggplot(df, aes(x = health.state, y = utility)) +
+  geom_boxplot() +
+  theme_bw()
+```
+
+```{r, fig.width=10, warning=FALSE}
+## scatter plot of mean utility vs GBD DW
+par(mfrow = c(1, 2), mar = c(4, 4, 1, 1) + .5)
+plot_utilities1(utilities4, DW2010, ylab = "GBD 2010 DW")
+plot_utilities1(utilities4, DW2013, ylab = "GBD 2013 DW")
+```
+
+### Fit loess and predict DW from EQ5D utility - GBD 2010
+
+```{r}
+## fit EQ5D vs GBD 2010 DW
+fit_2010 <-
+  loess(logit(c(0.0001, DW2010, 0.9999)) ~
+          c(0.9999, utilities_mean, 0.0001))
+
+## function to predict GBD 2010 DWs
+predict_2010 <-
+function(utility) {
+  expit(predict(fit_2010, utility))
+}
+
+## re-predict GBD 2010 DWs from utilities 
+DW2010_pred <- predict_2010(utilities_mean)
+
+## compare utilities, predicted and true GBD 2010 DWs
+round(
+  cbind(utility = utilities_mean,
+        "1-utility" = 1 - utilities_mean,
+        DW2010_pred,
+        DW2010,
+        pred.vs.true = DW2010_pred - DW2010),
+  3)
+```
+
+```{r}
+par(mar = c(4, 4, 1, 1))
+plot(DW2010_pred, DW2010); abline(0, 1)
+```
+
+```{r}
+cor.test(DW2010_pred, DW2010, method = "spearman")
+summary(lm(DW2010_pred ~ DW2010))
+```
+
+### Fit loess and predict DW from EQ5D utility - GBD 2013
+
+```{r}
+## fit EQ5D vs GBD 2013 DW
+fit_2013 <-
+  loess(logit(c(0.0001, DW2013, 0.9999)) ~
+          c(0.9999, utilities_mean, 0.0001))
+
+## function to predict GBD 2013 DWs
+predict_2013 <-
+function(utility) {
+  expit(predict(fit_2013, utility))
+}
+
+## re-predict GBD 2013 DWs from utilities 
+DW2013_pred <- predict_2013(utilities_mean)
+
+## compare utilities, predicted and true GBD 2013 DWs
+round(
+  cbind(utility = utilities_mean,
+        "1-utility" = 1 - utilities_mean,
+        DW2013_pred,
+        DW2013,
+        pred.vs.true = DW2013_pred - DW2013),
+  3)
+```
+
+```{r}
+par(mar = c(4, 4, 1, 1))
+plot(DW2013_pred, DW2013); abline(0, 1)
+```
+
+```{r}
+cor.test(DW2013_pred, DW2013, method = "spearman")
+summary(lm(DW2013_pred ~ DW2013))
+```
+
+### R session info
+
+```{r}
+sessionInfo()
+```
